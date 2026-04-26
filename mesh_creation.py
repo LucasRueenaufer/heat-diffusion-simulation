@@ -15,6 +15,8 @@ import meshio
 from pathlib import Path
 
 def main():
+    temp_dir = Path("temp/meshing")
+    temp_dir.mkdir(exist_ok=True,parents=True)
     skillet_mesher()
     mesh_to_dolfin()
     pass

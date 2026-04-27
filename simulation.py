@@ -62,7 +62,8 @@ def time_step_solution(func, solver, rhs,time_param,grid):
     u_n.x.array[:] = uh.x.array
     return uh, u_n, t
 
-def run_simulation(t,T,DeltaT,uh,u_n,b,linear_form,solver,xdmf,plotter,A,grid):
+def run_simulation(t,T,DeltaT,uh,u_n,b,linear_form,solver,xdmf,A,plots):
+    grid, plotter = plots
     num_steps=int(T/DeltaT)
     
     for i in range(num_steps):

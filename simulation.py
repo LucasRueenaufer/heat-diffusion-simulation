@@ -63,13 +63,17 @@ def time_step_solution(func, solver, rhs,time_param,grid):
     return uh, u_n, t
 
 def run_simulation(t,T,DeltaT,uh,u_n,b,linear_form,solver,xdmf,A,plots):
+    
+    # unpack values
     grid, plotter = plots
     num_steps=int(T/DeltaT)
     
+    # run for every time step
     for i in range(num_steps):
         uh, u_n, t = time_step_solution([uh,u_n],solver,[b,linear_form],[t,T,DeltaT],grid)
         solution_writer(xdmf,grid,plotter,uh,t)
     
+    # print some info and destroy instances to prevent memory leaks
     print("\nSimulation Completed.\n\nWriting Files...")
     plotter.close()
     xdmf.close()

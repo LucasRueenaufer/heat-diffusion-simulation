@@ -14,7 +14,6 @@ from ufl import (
     TestFunction,
     TrialFunction,
     dx,
-    functionspace,
     inner,
     grad,
     div,
@@ -23,6 +22,7 @@ from ufl import (
 from dolfinx.fem import (
     locate_dofs_topological,
     dirichletbc,
+    functionspace
     )
 
 from dolfinx.io import XDMFFile
@@ -35,17 +35,18 @@ with XDMFFile(MPI.COMM_WORLD, "temp/meshing/sloped_skillet.xdmf", "r") as xdmf:
     
     
     
-class Variational_Problem:
-    def __init__(self,domain,Functional,T):
-        self.Domain = domain,
-        self.FuncSpace = functionspace(domain, ("Lagrange", 1))
+class VariationalProblem:
+    def __init__(self,domain,Functional,T,const):
+        self.DeltaT = 0.1
+        self.Domain = domain
+        self.FuncSpace = functionspace(self.Domain, ("Lagrange", 1))
         self.TrialFunc = TrialFunction(self.FuncSpace)
         self.TestFunc = TestFunction(self.FuncSpace)
         self.Measure = dx
-        self.Functional = Functional(self.TrialFunc,self.TestFunc,self.Measure)
+        self.Const = const
+        self.Functional = Functional(self.TrialFunc,self.TestFunc,self.Measure,self.Const,self.DeltaT)
         self.bcs = [None]
         self.fdim = domain.topology.dim - 1
-        self.DeltaT = 0.1
     def AddBC(self,boundary_conditions):
         for condition in boundary_conditions:
             if condition.type == "Dirichlet":
@@ -77,15 +78,8 @@ class BoundaryCondition:
     @property
     def type(self):
         return self._type
+def main():
+    pass
 
-T=5
-
-def Functional(u,v,Dx):
-    return inner(grad(u),grad(v))*Dx
-
-VP = Variational_Problem(domain, Functional, T)
-
-# Define the Dirichlet condition
-boundary_conditions = [
-    BoundaryCondition("Dirichlet", 1,0,VP),
-]
+if __name__ == "__main__":
+    main()

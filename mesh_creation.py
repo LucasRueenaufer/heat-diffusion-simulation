@@ -12,12 +12,14 @@ that different Finite-Element programs can be run on it.
 import gmsh
 import glob
 import meshio
+import json
+
 from pathlib import Path
 
 def main():
     temp_dir = Path("temp/meshing")
     temp_dir.mkdir(exist_ok=True,parents=True)
-    skillet_mesher()
+    skillet_mesher("sloped_skillet")
     mesh_to_dolfin()
     pass
 
@@ -41,7 +43,7 @@ def mesh_to_dolfin():
     
         meshio.write(str(path.with_suffix(".xdmf")), mesh)
         
-def skillet_mesher():
+def skillet_mesher(file_name: str):
     # --- does the skillet need a handle? ---
     add_Handle = True
     
@@ -129,7 +131,18 @@ def skillet_mesher():
     if add_Tofu:
         model.addPhysicalGroup(3, tofu_entities, tag=2)
         model.setPhysicalName(3, 2, "tofu")
-    
+        
+    # --- save cell_tag names as a dict with markers ---
+    phys_groups = gmsh.model.getPhysicalGroups()
+    mapping = {}
+
+    for dim, tag in phys_groups:
+        name = gmsh.model.getPhysicalName(dim, tag)
+        mapping[tag] = name
+
+    with open("temp/meshing/"+file_name+".json", "w") as f:
+        json.dump(mapping, f, indent=2)
+
     # --- mesh parameters ---
     gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.05)
     gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 0.5)
@@ -138,7 +151,7 @@ def skillet_mesher():
     model.mesh.generate(3)
     
     # ---saving the result ---
-    gmsh.write("temp/meshing/sloped_skillet.msh")
+    gmsh.write("temp/meshing/"+file_name+".msh")
     
     gmsh.finalize()
     pass

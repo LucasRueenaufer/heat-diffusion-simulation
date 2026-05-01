@@ -10,10 +10,22 @@ solve by doing discretized time steps and treating every step as a
 steady state problem.
 """
 
-import sys
 from dolfinx.fem.petsc import (
     assemble_vector,
+    assemble_matrix,
+    create_vector,
+    apply_lifting,
+    set_bc,
+    
 )
+import sys
+from petsc4py import PETSc
+
+from dolfinx.fem import form, extract_function_spaces, Function
+
+from ufl import lhs, rhs
+
+import variational_class
 
 def main():
     pass
@@ -62,15 +74,49 @@ def time_step_solution(func, solver, rhs,time_param,grid):
     u_n.x.array[:] = uh.x.array
     return uh, u_n, t
 
-def run_simulation(t,T,DeltaT,uh,u_n,b,linear_form,solver,xdmf,A,plots):
+def run_simulation(VP,plots,xdmf):
+    t = 0
     
     # unpack values
     grid, plotter = plots
-    num_steps=int(T/DeltaT)
+    num_steps=int(VP.T/VP.DeltaT)
     
+    # interpolate starting conditions
+    u_n = Function(VP.FuncSpace)
+    uh = Function(VP.FuncSpace)
+    uh.name ="uh"
+    u_n.name ="u_n"
+    
+    uh.interpolate(VP.u_n)
+    u_n.interpolate(VP.u_n)
+    
+    # set up variational forms
+    a = lhs(VP.Functional)
+    L = rhs(VP.Functional)
+
+    bilinear_form = form(a)
+    linear_form = form(L)
+
+    A = assemble_matrix(bilinear_form, bcs=VP.Bcs)
+    A.assemble()
+    b= create_vector(extract_function_spaces(linear_form))
+    
+    
+    # Solve linear variational problem
+    solver = PETSc.KSP().create(VP.Domain.comm)
+    solver.setOperators(A)
+    solver.setType(PETSc.KSP.Type.PREONLY)
+    solver.getPC().setType(PETSc.PC.Type.LU)
+
     # run for every time step
     for i in range(num_steps):
-        uh, u_n, t = time_step_solution([uh,u_n],solver,[b,linear_form],[t,T,DeltaT],grid)
+        # rebuild lhs and rhs forms with new u_n
+        bilinear_form, linear_form = VP.build_forms(u_n)
+        
+        # run single time step
+        uh, u_n, t = time_step_solution([uh,u_n],solver,[b,linear_form],[t,VP.T,VP.DeltaT],grid)
+        
+        # save solutions in plot and xdmf
         solution_writer(xdmf,grid,plotter,uh,t)
     
     # print some info and destroy instances to prevent memory leaks

@@ -62,7 +62,7 @@ class VariationalProblem:
         self.u_n = Function(self.FuncSpace)
         self.u_n.interpolate(Inital_Condition)
         self.uh =self.u_n.copy()
-        
+        self.uh.name = "uh"
         # declare functional
         self.Functional = Functional(self.TestFunc,self.TrialFunc,self.Measure,self.Const,self.DeltaT,self.u_n)
         print("Boundary Problem Initiated")
@@ -96,36 +96,6 @@ class VariationalProblem:
         self.Domain.topology.create_connectivity(self.Fdim, self.Fdim+1)
         print("Tagged Boundary Facets!")
         
-    """def prepare_plotter(self,gif):
-        if gif:
-            self.grid = pyvista.UnstructuredGrid(*plot.vtk_mesh(self.FuncSpace))
-
-            self.plotter = pyvista.Plotter()
-            self.plotter.open_gif("results/u_time.gif", fps=int(1/self.DeltaT))
-
-            self.grid.point_data["uh"] = self.uh.x.array
-
-            viridis = mpl.colormaps.get_cmap("viridis").resampled(25)
-            sargs = dict(
-                title_font_size=25,
-                label_font_size=20,
-                fmt="%.2e",
-                color="black",
-                position_x=0.1,
-                position_y=0.8,
-                width=0.8,
-                height=0.1,
-                )
-
-    
-            self.renderer = self.plotter.add_mesh(
-                self.grid,
-                show_edges=False,
-                cmap=viridis,
-                scalar_bar_args=sargs,
-                clim=[0, 200],
-            )
-       """ 
     def prepare_solver(self):
         # Build forms and assemble matrix and vector
         self.bilinear_form = form(lhs(self.Functional))
@@ -169,11 +139,11 @@ class VariationalProblem:
         self.A.destroy()
         self.b.destroy()
         self.solver.destroy()
-        print("Done!")
+        
     def prepare_writer(self):
         self.xdmf = XDMFFile(self.Domain.comm, self.temp_dir/"diffusion.xdmf", "w")
         self.xdmf.write_mesh(self.Domain)
-        self.xdmf.write_function(self.u_n, 0)
+        self.xdmf.write_function(self.uh, 0)
 
         
 

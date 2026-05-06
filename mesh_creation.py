@@ -12,12 +12,14 @@ that different Finite-Element programs can be run on it.
 import gmsh
 import glob
 import meshio
+import json
+
 from pathlib import Path
 
 def main():
     temp_dir = Path("temp/meshing")
     temp_dir.mkdir(exist_ok=True,parents=True)
-    skillet_mesher()
+    skillet_mesher("sloped_skillet")
     mesh_to_dolfin()
     pass
 
@@ -41,7 +43,7 @@ def mesh_to_dolfin():
     
         meshio.write(str(path.with_suffix(".xdmf")), mesh)
         
-def skillet_mesher():
+def skillet_mesher(file_name: str):
     # --- does the skillet need a handle? ---
     add_Handle = True
     
@@ -98,12 +100,13 @@ def skillet_mesher():
     # --- subtract cavity from skillet ---
     skillet = occ.cut(skillet_body, [(3, inner)])[0]
     skillet_old = skillet
+    
     # ---add optional tofu ---
     if add_Tofu:
         # parameters of tofu-block
-        tofu_length = 8
+        tofu_length = 10
         tofu_width = 6
-        tofu_height = 3
+        tofu_height = 2.5
         
         # adding tofu to skillet
         tofu = occ.addBox(-tofu_length/2,-tofu_width/2,bottom_thickness,tofu_length,tofu_width,tofu_height)
@@ -129,16 +132,41 @@ def skillet_mesher():
     if add_Tofu:
         model.addPhysicalGroup(3, tofu_entities, tag=2)
         model.setPhysicalName(3, 2, "tofu")
+        
+    # --- save cell_tag names as a dict with markers ---
+    phys_groups = gmsh.model.getPhysicalGroups()
+    mapping = {}
+
+    for dim, tag in phys_groups:
+        name = gmsh.model.getPhysicalName(dim, tag)
+        mapping[tag] = name
+
+    with open("temp/meshing/"+file_name+".json", "w") as f:
+        json.dump(mapping, f, indent=2)
+        
+    # --- refine mesh in z direction ---
+    dz=0.4
+    field = gmsh.model.mesh.field.add("Box")
+
+    gmsh.model.mesh.field.setNumber(field, "VIn", dz/2)
+    gmsh.model.mesh.field.setNumber(field, "VOut", 0.5)
+    gmsh.model.mesh.field.setNumber(field, "XMin", -100)
+    gmsh.model.mesh.field.setNumber(field, "XMax",  100)
+    gmsh.model.mesh.field.setNumber(field, "YMin", -100)
+    gmsh.model.mesh.field.setNumber(field, "YMax",  100)
+    gmsh.model.mesh.field.setNumber(field, "ZMin", 0)
+    gmsh.model.mesh.field.setNumber(field, "ZMax", bottom_thickness *1.2)
     
+    gmsh.model.mesh.field.setAsBackgroundMesh(field)
     # --- mesh parameters ---
-    gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.05)
-    gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 0.5)
+    #gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.1)
+    #gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 0.5)
     
     # --- generate mesh ---
     model.mesh.generate(3)
     
     # ---saving the result ---
-    gmsh.write("temp/meshing/sloped_skillet.msh")
+    gmsh.write("temp/meshing/"+file_name+".msh")
     
     gmsh.finalize()
     pass

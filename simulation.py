@@ -41,11 +41,12 @@ from dolfinx.io import XDMFFile
 import numpy as np
 from petsc4py import PETSc
 
+import additional_operations as addop
    
 from ufl import lhs, rhs    
 
 class VariationalProblem:
-    def __init__(self,domain,Functional,Inital_Condition,T,t,const,temp_dir,DeltaT=0.1):
+    def __init__(self,domain,region,Functional,Inital_Condition,T,t,const,temp_dir,DeltaT=0.1):
         # Saev lots of variables
         self.temp_dir=temp_dir
         self.t = t
@@ -63,9 +64,11 @@ class VariationalProblem:
         self.u_n.interpolate(Inital_Condition)
         self.uh =self.u_n.copy()
         self.uh.name = "uh"
+        self.Region = region
         # declare functional
         self.Functional = Functional(self.TestFunc,self.TrialFunc,self.Measure,self.Const,self.DeltaT,self.u_n)
         print("Boundary Problem Initiated")
+        
     def AddBC(self,boundary_conditions):
         # add boundary conditions to functional for wobin and neumann or
         # to list for dirichlet
@@ -145,18 +148,19 @@ class VariationalProblem:
         self.xdmf.write_mesh(self.Domain)
         self.xdmf.write_function(self.uh, 0)
 
-        
-
     def run_simulation(self):
         # initialize solver
         self.prepare_solver()
         self.prepare_writer()
+        
         # use tqdm as iterator for nice progress bar
         for i in tqdm(range(int(self.T/self.DeltaT)),desc="Solving PDE"):
             # run single time step
             self.time_step()
             # write the solution
             self.xdmf.write_function(self.uh,self.t)
+            
+            addop.additional_operations(self)
 
         self.destroy_solver()
         self.xdmf.close()

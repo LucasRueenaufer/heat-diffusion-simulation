@@ -160,10 +160,13 @@ class VariationalProblem:
             # write the solution
             self.xdmf.write_function(self.uh,self.t)
             
+            # run any additional operation of the data
             addop.additional_operations(self)
-
+        
+        # do not let any data leaks happen
         self.destroy_solver()
         self.xdmf.close()
+        print("Simulation Finished!")
     
     
 class BoundaryCondition:

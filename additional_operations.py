@@ -8,7 +8,7 @@ Created on Wed May  6 11:09:55 2026
 
 import numpy as np
 from dolfinx.fem import Function
-from dolfinx import fem, geometry
+from dolfinx import geometry
 import simulation as VC
 
 def additional_operations(VP):
@@ -27,25 +27,29 @@ def additional_operations(VP):
         
 def flip_tofu_z(VP):
     """
-    Flip the tofu temperature in z by interpolation.
-
-    Assumes:
-      - rectangular tofu
-      - same mesh before/after flip
-      - pan remains unchanged
+    Flip the tofu temperature in z by interpolation. This only works food
+    which does not change crosssection vertically (tofu, burgers, etc)
     """
+    # define tufu dim
     z_min = 0.8
     z_max = 0.8+2.5
+    
+    # create function to store flipped tofu field
     u_new = Function(VP.FuncSpace)
     
     u_new.x.array[:] = VP.uh.x.array
-
+    
+    # build spatial search tree
     tdim = VP.Fdim+1
     tree = geometry.bb_tree(VP.Domain, tdim)
 
     tofu_cells = VP.Region["tofu"]
 
     def flipped(x):
+        """
+        Function that flips field inside tofu cells
+        """
+        # mirror coordinated
         xr = x.copy()
         xr[2] = z_min + z_max - xr[2]
 
@@ -59,12 +63,14 @@ def flip_tofu_z(VP):
             dtype=np.int32,
         )
 
-        # IMPORTANT: eval now has matching (x, cells)
+        # evaluate function at flipped coordinate
         return VP.uh.eval(xq, cells).T
-
+    
+    # interpolate such that the new function matches the cells
     u_new.interpolate(flipped, tofu_cells)
     u_new.x.scatter_forward()
-
+    
+    # return spacial array of flipped tofu state
     return u_new.x.array
 
 # validate region map by comparing material map to all regions

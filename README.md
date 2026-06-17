@@ -1,6 +1,9 @@
 # Heat Diffusion Simulation
 Heat diffusion simulation is a pet project programmed in Python to simulate the cooking process of a piece of tofu in a pan by using DOLFINx to run Finite-Element solving methods on basis of the heat diffusion equation. The goal is to study how many times I have to turn a tofu in a cast iron pan, that the center cooks fastest, while not burning the outside.
 
+# Disclaimer
+This project is disfunctional right now, as a proper examination of the problem requires the introduction of a moisture-field, storing the moisture content of the tofu. This is necessary to account for the latent heat of evaporating water. However the architecture of the simulation is at this point not adaptable to coupled differential equations, whih solution is needed in the latent heat case. For these reasons the project in its current state is in hiatus, as I try to plan out a better, more adaptable architecture to solve larger class of problems.
+
 # Usage
 The project includes a Variational_Problem class which can be modified by passing different boundary and starting conditions and different weak forms. It should be capable to solve multiple time-dependent linear PDEs, not only the heat equation, although proper support for this is still to be implemented, as well as for non-linear PDEs. The Program further features the option to insert special operations on the variational problem (like flipping the tofu) at any time step. Further a clean way to define different constants on the different sub-domains of the mesh is included. This offers a clean and fast way to answer the tofu question or similar problems you might encounter.
 

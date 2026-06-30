@@ -17,7 +17,7 @@ def additional_operations(VP):
     operations that need to be fulfilled at the simulated timesteps
     here.
     """
-    fliptimes=np.array([15,30,45])/VP.DeltaT
+    fliptimes=np.array([120,240,270])/VP.DeltaT
     fliptimes=fliptimes.astype(np.int32)
     
     # if we reach a flipping step, we flip the tofu
@@ -25,6 +25,28 @@ def additional_operations(VP):
         VP.u_n.x.array[:]=flip_tofu_z(VP)
         print(f"Flipping Tofu at t={VP.t}")
         
+    average_tofu(VP)
+        
+def average_tofu(VP):
+    # define a few points which we later average the temperature over
+    delta = 0.05
+    tofu_center = [0,0,2.05]
+    shifts = [-delta,0, delta]
+    
+    dx,dy,dz = np.meshgrid(shifts,shifts,shifts,indexing="ij")
+    points = tofu_center+np.column_stack((dx.ravel(),dy.ravel(),dz.ravel()))
+    
+    # get temperature at these points
+    cell_candidates = geometry.compute_collisions_points(VP.Tree, points)
+    cell_colliding = geometry.compute_colliding_cells(VP.Domain, cell_candidates, points)
+    
+    cells = np.array([cell_colliding.links(i)[0] for i in range(len(points))], dtype=np.int32)
+    
+    # evaluate, average and save in VP
+    point_temp = VP.u_n.eval(points,cells).flatten()
+    Avg_temp = point_temp.mean()
+    VP.AvgT.append([VP.t, Avg_temp])
+    
 def flip_tofu_z(VP):
     """
     Flip the tofu temperature in z by interpolation. This only works food

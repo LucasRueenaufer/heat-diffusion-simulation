@@ -34,12 +34,15 @@ from dolfinx.fem import (
     form
     )
 
-from dolfinx.mesh import locate_entities, meshtags
+from dolfinx.mesh import locate_entities_boundary, meshtags
 
 from dolfinx.io import XDMFFile
 
 import numpy as np
 from petsc4py import PETSc
+import matplotlib.pyplot as plt
+
+from dolfinx import geometry
 
 import additional_operations as addop
    
@@ -60,11 +63,13 @@ class VariationalProblem:
         self.Const = const
         self.Bcs = []
         self.Fdim = domain.topology.dim - 1
+        self.Tree = geometry.bb_tree(domain,self.Fdim+1)
         self.u_n = Function(self.FuncSpace)
         self.u_n.interpolate(Inital_Condition)
         self.uh =self.u_n.copy()
         self.uh.name = "uh"
         self.Region = region
+        self.AvgT = []
         # declare functional
         self.Functional = Functional(self.TestFunc,self.TrialFunc,self.Measure,self.Const,self.DeltaT,self.u_n)
         print("Boundary Problem Initiated")
@@ -83,7 +88,7 @@ class VariationalProblem:
         # tag all boundary facets that fulfill external locator
         facet_indices, facet_markers = [], []
         for marker, locator in boundaries:
-            facets = locate_entities(self.Domain,self.Fdim, locator)
+            facets = locate_entities_boundary(self.Domain,self.Fdim, locator)
             facet_indices.append(facets)
             facet_markers.append(np.full_like(facets, marker))
         facet_indices = np.hstack(facet_indices).astype(np.int32)
@@ -162,6 +167,14 @@ class VariationalProblem:
             
             # run any additional operation of the data
             addop.additional_operations(self)
+        
+        #plot the average core temp over time
+        data=np.array(self.AvgT)
+        plt.scatter(data[:, 0], data[:, 1])
+        plt.xlabel("Time")
+        plt.ylabel("Temperature")
+        plt.grid(True)
+        plt.show()
         
         # do not let any data leaks happen
         self.destroy_solver()

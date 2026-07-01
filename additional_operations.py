@@ -17,7 +17,7 @@ def additional_operations(VP):
     operations that need to be fulfilled at the simulated timesteps
     here.
     """
-    fliptimes=np.array([120,240,270])/VP.DeltaT
+    fliptimes=np.array(VP.Timestamps)/VP.DeltaT
     fliptimes=fliptimes.astype(np.int32)
     
     # if we reach a flipping step, we flip the tofu

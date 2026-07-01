@@ -49,9 +49,10 @@ import additional_operations as addop
 from ufl import lhs, rhs    
 
 class VariationalProblem:
-    def __init__(self,domain,region,Functional,Inital_Condition,T,t,const,temp_dir,DeltaT=0.1):
+    def __init__(self,domain,region,Functional,Inital_Condition,T,t,const,temp_dir,res_dir,timestamps, DeltaT=0.1):
         # Saev lots of variables
         self.temp_dir=temp_dir
+        self.res_dir=res_dir
         self.t = t
         self.DeltaT = DeltaT
         self.T= T
@@ -69,6 +70,7 @@ class VariationalProblem:
         self.uh =self.u_n.copy()
         self.uh.name = "uh"
         self.Region = region
+        self.Timestamps = timestamps
         self.AvgT = []
         # declare functional
         self.Functional = Functional(self.TestFunc,self.TrialFunc,self.Measure,self.Const,self.DeltaT,self.u_n)
@@ -171,10 +173,19 @@ class VariationalProblem:
         #plot the average core temp over time
         data=np.array(self.AvgT)
         plt.scatter(data[:, 0], data[:, 1])
-        plt.xlabel("Time")
-        plt.ylabel("Temperature")
+        plt.title("Tofu Core Temperature")
+        plt.xlabel("Time in s")
+        plt.ylabel("Temperature in °C")
         plt.grid(True)
-        plt.show()
+        
+        # Plot times at which tofu is flipped
+        for t in self.Timestamps:
+            plt.axvline(x=t, color="red", linestyle="--", linewidth=1, alpha=0.7)
+            if t == self.Timestamps[0]:
+                plt.text(t, 50, "Tofu Flipped", rotation=90, va="top", color="red", ha="right", fontsize=8)
+                
+        # save plot in result folder
+        plt.savefig(self.res_dir / "Core_temp.png", dpi=300, bbox_inches="tight")
         
         # do not let any data leaks happen
         self.destroy_solver()
